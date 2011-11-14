@@ -1,11 +1,9 @@
 <?php
 /*
 Plugin Name: OS Custom Admin
-Plugin URI: http://www.horizondml.co.uk/
 Description: Cleans up the Wordpress admin to make more user-friendly.
 Version: 0.3
 Author: Oli Salisbury
-Author URI: http://www.horizondml.co.uk/
 */
 
 //hooks
