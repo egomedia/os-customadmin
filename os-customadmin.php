@@ -2,9 +2,42 @@
 /*
 Plugin Name: OS Custom Admin
 Description: Cleans up the Wordpress admin to make more user-friendly.
-Version: 0.3
+Version: 0.4
 Author: Oli Salisbury
 */
+
+//limit upload size to 350kb for images
+//v1.1
+add_filter('wp_handle_upload_prefilter', 'reduce_max_upload_limit');
+function reduce_max_upload_limit($file) {
+	$size = $file['size'];
+	$allowed_exts = array('pdf', 'doc');
+	$ext = str_replace(".", "", strstr($file['name'], "."));
+	if ($size > 350 * 1024 && !in_array($ext, $allowed_exts)) {
+		 $file['error'] = 'Images larger than 350KB are prohibited. Please resize the file and try again.';
+	}
+	return $file;
+}
+
+//add all custom post types to the "Right Now" box on the Dashboard
+add_action('right_now_content_table_end' , 'os_right_now_content_table_end');
+function os_right_now_content_table_end() {
+  $args = array('public' => true, '_builtin' => false);
+  $output = 'object';
+  $operator = 'and';
+  $post_types = get_post_types($args, $output, $operator);
+  foreach($post_types as $post_type) {
+    $num_posts = wp_count_posts($post_type->name);
+    $num = number_format_i18n($num_posts->publish);
+    $text = _n($post_type->labels->singular_name, $post_type->labels->name, intval($num_posts->publish));
+    if (current_user_can('edit_posts')) {
+      $num = "<a href='edit.php?post_type=$post_type->name'>$num</a>";
+      $text = "<a href='edit.php?post_type=$post_type->name'>$text</a>";
+    }
+    echo '<tr><td class="first b b-'.$post_type->name.'">'.$num.'</td>';
+    echo '<td class="t '.$post_type->name.'">'.$text.'</td></tr>';
+  }
+}
 
 //hooks
 if (WP_ADMIN) {
@@ -16,15 +49,11 @@ if (WP_ADMIN) {
 	add_filter('manage_posts_columns', 'custom_post_columns');
 	add_filter('manage_pages_columns', 'custom_pages_columns');
 	add_filter('manage_media_columns', 'custom_media_columns');
-	add_filter('admin_footer_text', 'modify_footer_admin');
 	add_action('init', 'change_post_object_label');
 	add_action('admin_menu', 'change_post_menu_label');
-	add_action('login_head', 'login_logo');
-	add_action('admin_head', 'admin_logo');
 }
 
-//minimise admin/meta panels
-//enabling pages & posts see //* to disable posts
+//functions
 function remove_dashboard_widgets(){
 	global$wp_meta_boxes;
 	unset($wp_meta_boxes['dashboard']['normal']['core']['dashboard_plugins']);
@@ -35,24 +64,21 @@ function remove_dashboard_widgets(){
 	unset($wp_meta_boxes['dashboard']['side']['core']['dashboard_quick_press']);
 	unset($wp_meta_boxes['dashboard']['side']['core']['dashboard_recent_drafts']);
 }
-
 function remove_dashboard_discussion() { //*, .b-posts, .posts
   echo '
   <style type="text/css">
   .table_discussion, .b-cats, .cats, .b-tags, .tags { display:none; }
   </style>';
 }
-
 function remove_menu_items() { //*, __('Posts')
 	global $menu;
 	$restricted = array(__('Links'), __('Comments'), __('Profile'), __('Tools'));
-	end ($menu);
+	end($menu);
 	while (prev($menu)){
 		$value = explode(' ',$menu[key($menu)][0]);
 		if(in_array($value[0] != NULL?$value[0]:"" , $restricted)){unset($menu[key($menu)]);}
 	}
 }
-
 function remove_submenus() {
 	global $submenu;
 	unset($submenu['index.php'][10]); //removes updates
@@ -60,7 +86,6 @@ function remove_submenus() {
 	unset($submenu['edit.php'][16]); //removes tags
 	unset($submenu['edit.php?post_type=page'][10]); //removes add new page
 }
-
 function customize_meta_boxes() {
 	//removes meta boxes from posts
 	remove_meta_box('postcustom','post','normal');
@@ -80,10 +105,9 @@ function customize_meta_boxes() {
 	remove_meta_box('commentsdiv','page','normal'); 
 	remove_meta_box('authordiv','page','normal');
 	remove_meta_box('revisionsdiv','page','normal');
-	//remove_meta_box('slugdiv','page','normal');
 	//remove_meta_box('pageparentdiv','page','normal');
+	//remove_meta_box('slugdiv','page','normal');
 }
-
 function custom_post_columns($defaults) {
 	unset($defaults['comments']);
 	unset($defaults['author']);
@@ -91,36 +115,26 @@ function custom_post_columns($defaults) {
 	unset($defaults['tags']);
 	return $defaults;
 }
-
 function custom_pages_columns($defaults) {
 	unset($defaults['comments']);
 	unset($defaults['author']);
 	unset($defaults['date']);
 	return $defaults;
 }
-
 function custom_media_columns($defaults) {
 	unset($defaults['comments']);
 	unset($defaults['author']);
 	return $defaults;
 }
-
-function modify_footer_admin () {
-	echo 'Created by <a href="http://www.egomedia.co.uk">Ego Media</a>. ';
-	echo 'Powered by <a href="http://WordPress.org">WordPress</a>.';
-}
-
-//change posts label to news
 function change_post_menu_label() {
 	global $menu;
 	global $submenu;
 	$menu[5][0] = 'News';
-	$submenu['edit.php'][5][0] = 'View News';
+	$submenu['edit.php'][5][0] = 'News';
 	$submenu['edit.php'][10][0] = 'Add News';
-	//$submenu['edit.php'][16][0] = 'News Tags';
+	$submenu['edit.php'][16][0] = 'News Tags';
 	echo '';
 }
-
 function change_post_object_label() {
 	global $wp_post_types;
 	$labels = &$wp_post_types['post']->labels;
@@ -134,14 +148,5 @@ function change_post_object_label() {
 	$labels->search_items = 'Search News';
 	$labels->not_found = 'No News found';
 	$labels->not_found_in_trash = 'No News found in Trash';
-}
-
-//add egomedia logo to login
-function login_logo() {
-	echo '<style type="text/css">h1 a { background:url("http://109.123.106.119/admin-login.png") no-repeat !important; }</style>';
-}
-//add egomedia logo to admin
-function admin_logo() {
-	echo '<style type="text/css">#header-logo { background:url("http://109.123.106.119/admin-emblem.png") !important; width:33px !important; }</style>'; 
 }
 ?>
