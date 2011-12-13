@@ -2,7 +2,7 @@
 /*
 Plugin Name: OS Custom Admin
 Description: Cleans up the Wordpress admin to make more user-friendly.
-Version: 0.4
+Version: 0.5
 Author: Oli Salisbury
 */
 
@@ -64,13 +64,14 @@ function remove_dashboard_widgets(){
 	unset($wp_meta_boxes['dashboard']['side']['core']['dashboard_quick_press']);
 	unset($wp_meta_boxes['dashboard']['side']['core']['dashboard_recent_drafts']);
 }
-function remove_dashboard_discussion() { //*, .b-posts, .posts
+function remove_dashboard_discussion() { //, .b-posts, .posts
   echo '
   <style type="text/css">
-  .table_discussion, .b-cats, .cats, .b-tags, .tags { display:none; }
+  .table_discussion, .b-cats, .cats, .b-tags, .tags { display:none !important; }
+	#tab-type_url { display:none !important; }
   </style>';
 }
-function remove_menu_items() { //*, __('Posts')
+function remove_menu_items() { //, __('Posts')
 	global $menu;
 	$restricted = array(__('Links'), __('Comments'), __('Profile'), __('Tools'));
 	end($menu);
@@ -148,5 +149,49 @@ function change_post_object_label() {
 	$labels->search_items = 'Search News';
 	$labels->not_found = 'No News found';
 	$labels->not_found_in_trash = 'No News found in Trash';
+}
+
+//custom admin bar
+add_action('admin_bar_menu', 'custom_admin_bar', 1000);
+function custom_admin_bar($wp_admin_bar) { 
+	//remove wordpress tab
+	$wp_admin_bar->remove_node('wp-logo'); 
+	//remove visit site tab
+	$wp_admin_bar->remove_node('view-site');
+	//remove comments tab
+	$wp_admin_bar->remove_node('comments');
+	//remove add new subtabs
+	$wp_admin_bar->remove_node('new-page');
+	$wp_admin_bar->remove_node('new-media');
+	$wp_admin_bar->remove_node('new-link');
+	$wp_admin_bar->remove_node('new-user');
+	//rename new Post to News
+	$wp_admin_bar->add_node(array('id'=>'new-post', 'title'=>'News'));
+	//update myaccount tab
+	$myaccount = $wp_admin_bar->get_node('my-account');
+	$wp_admin_bar->add_node(array('id'=>'my-account', 'title'=>str_replace("Howdy", "Welcome", $myaccount->title)));
+}
+
+//hide settings tab from low roles
+add_action('admin_head','hide_settings_from_lowroles');
+function hide_settings_from_lowroles() {
+	if (!current_user_can('administrator')) {
+		echo '
+		<style type="text/css">
+		#menu-settings { display:none !important; }
+		</style>';
+	}
+}
+
+//hide 'add new' page button
+add_action('admin_head','hide_add_new_page_button');
+function hide_add_new_page_button() {
+	global $post;
+	if ($post->post_type == 'page') {
+		echo '
+		<style type="text/css">
+		.add-new-h2 { display:none; }
+		</style>';
+	}
 }
 ?>
