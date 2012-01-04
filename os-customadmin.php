@@ -2,7 +2,7 @@
 /*
 Plugin Name: OS Custom Admin
 Description: Cleans up the Wordpress admin to make more user-friendly.
-Version: 0.6
+Version: 0.7
 Author: Oli Salisbury
 */
 
@@ -25,6 +25,10 @@ class os_customadmin {
 		add_action('admin_menu', array($this, 'change_post_menu_label'));
 		add_action('admin_bar_menu', array($this, 'custom_admin_bar'), 1000);
 		add_action('admin_head', array($this, 'hide_add_new_page_button'));
+		if (!current_user_can('administrator')) {
+			add_action('admin_menu', array($this, 'hide_updates_nag'));
+			add_filter('tiny_mce_before_init', array($this, 'custom_tiny_mce');
+		}
 	}
 	
 	//limit upload size to 350kb for images
@@ -162,6 +166,8 @@ class os_customadmin {
 		$wp_admin_bar->remove_node('wp-logo'); 
 		//remove visit site tab
 		$wp_admin_bar->remove_node('view-site');
+		//remove updates tab
+		$wp_admin_bar->remove_node('updates');
 		//remove comments tab
 		$wp_admin_bar->remove_node('comments');
 		//remove add new subtabs
@@ -185,6 +191,20 @@ class os_customadmin {
 			.add-new-h2 { display:none; }
 			</style>';
 		}
+	}
+	
+	//hide updates nag from non admins
+	function hide_updates_nag() {
+		remove_action('admin_notices', 'update_nag', 3);
+	}
+	
+	//custom tinymce editor
+	function custom_tiny_mce($in) {
+		$in['theme_advanced_buttons1']='formatselect,|,bold,italic,|,link,unlink,|,bullist,numlist,|,copy,pastetext,|,undo,redo,|,wp_more';//,|,wp_adv';
+		$in['theme_advanced_buttons2']='justifyleft,justifycenter,justifyright,|,forecolor,|,removeformat,|,charmap,|,wp_fullscreen';
+		$in['theme_advanced_buttons3']='';
+		$in['theme_advanced_buttons4']='';
+		return $in;
 	}
 	
 }
