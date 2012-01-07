@@ -1,12 +1,14 @@
 <?php
 /*
 Plugin Name: OS Custom Admin
-Description: Cleans up the Wordpress admin to make more user-friendly.
+Description: Cleans up the Wordpress admin to make more user-friendly for corporate clients.
 Version: 0.7
 Author: Oli Salisbury
 */
 
-new os_customadmin;
+if (WP_ADMIN) {
+	new os_customadmin;
+}
 
 class os_customadmin {
 	
@@ -25,10 +27,8 @@ class os_customadmin {
 		add_action('admin_menu', array($this, 'change_post_menu_label'));
 		add_action('admin_bar_menu', array($this, 'custom_admin_bar'), 1000);
 		add_action('admin_head', array($this, 'hide_add_new_page_button'));
-		if (!current_user_can('administrator')) {
-			add_action('admin_menu', array($this, 'hide_updates_nag'));
-			add_filter('tiny_mce_before_init', array($this, 'custom_tiny_mce');
-		}
+		add_action('admin_menu', array($this, 'hide_updates_nag'));
+		add_filter('tiny_mce_before_init', array($this, 'custom_tiny_mce'));
 	}
 	
 	//limit upload size to 350kb for images
@@ -195,15 +195,19 @@ class os_customadmin {
 	
 	//hide updates nag from non admins
 	function hide_updates_nag() {
-		remove_action('admin_notices', 'update_nag', 3);
+		if (!current_user_can('administrator')) {
+			remove_action('admin_notices', 'update_nag', 3);
+		}
 	}
 	
 	//custom tinymce editor
 	function custom_tiny_mce($in) {
-		$in['theme_advanced_buttons1']='formatselect,|,bold,italic,|,link,unlink,|,bullist,numlist,|,copy,pastetext,|,undo,redo,|,wp_more';//,|,wp_adv';
-		$in['theme_advanced_buttons2']='justifyleft,justifycenter,justifyright,|,forecolor,|,removeformat,|,charmap,|,wp_fullscreen';
-		$in['theme_advanced_buttons3']='';
-		$in['theme_advanced_buttons4']='';
+		if (!current_user_can('administrator')) {
+			$in['theme_advanced_buttons1']='formatselect,|,bold,italic,|,link,unlink,|,bullist,numlist,|,undo,redo,|,wp_more';//,|,wp_adv';
+			$in['theme_advanced_buttons2']='justifyleft,justifycenter,justifyright,|,forecolor,|,removeformat,|,charmap,|,wp_fullscreen';
+			$in['theme_advanced_buttons3']='';
+			$in['theme_advanced_buttons4']='';
+		}
 		return $in;
 	}
 	
