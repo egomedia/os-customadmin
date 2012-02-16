@@ -2,16 +2,18 @@
 /*
 Plugin Name: OS Custom Admin
 Description: Cleans up the Wordpress admin to make more user-friendly for corporate clients.
-Version: 0.7
+Version: 0.8
 Author: Oli Salisbury
 */
 
 if (WP_ADMIN) {
-	new os_customadmin;
+	$os_customadmin = new OS_CustomAdmin();
+	//$os_customadmin->rename_post_object('Car', 'Cars');
 }
 
-class os_customadmin {
+class OS_CustomAdmin {
 	
+	//construct
 	function __construct() {
 		add_filter('wp_handle_upload_prefilter', array($this, 'reduce_max_upload_limit'));
 		add_action('right_now_content_table_end' , array($this, 'add_all_post_types_to_dashboard'));
@@ -23,12 +25,11 @@ class os_customadmin {
 		add_filter('manage_posts_columns', array($this, 'custom_post_columns'));
 		add_filter('manage_pages_columns', array($this, 'custom_pages_columns'));
 		add_filter('manage_media_columns', array($this, 'custom_media_columns'));
-		add_action('init', array($this, 'change_post_object_label'));
-		add_action('admin_menu', array($this, 'change_post_menu_label'));
 		add_action('admin_bar_menu', array($this, 'custom_admin_bar'), 1000);
 		add_action('admin_head', array($this, 'hide_add_new_page_button'));
 		add_action('admin_menu', array($this, 'hide_updates_nag'));
 		add_filter('tiny_mce_before_init', array($this, 'custom_tiny_mce'));
+		$this->rename_post_object();
 	}
 	
 	//limit upload size to 350kb for images
@@ -73,6 +74,7 @@ class os_customadmin {
 		unset($wp_meta_boxes['dashboard']['side']['core']['dashboard_quick_press']);
 		unset($wp_meta_boxes['dashboard']['side']['core']['dashboard_recent_drafts']);
 	}
+	
 	function remove_dashboard_discussion() { //, .b-posts, .posts
 		echo '
 		<style type="text/css">
@@ -80,6 +82,7 @@ class os_customadmin {
 		#tab-type_url { display:none !important; }
 		</style>';
 	}
+	
 	function remove_menu_items() { //, __('Posts')
 		global $menu;
 		$restricted = array(__('Links'), __('Comments'), __('Profile'), __('Tools'));
@@ -89,6 +92,7 @@ class os_customadmin {
 			if(in_array($value[0] != NULL?$value[0]:"" , $restricted)){unset($menu[key($menu)]);}
 		}
 	}
+	
 	function remove_submenus() {
 		global $submenu;
 		unset($submenu['index.php'][10]); //removes updates
@@ -96,6 +100,7 @@ class os_customadmin {
 		unset($submenu['edit.php'][16]); //removes tags
 		unset($submenu['edit.php?post_type=page'][10]); //removes add new page
 	}
+	
 	function customize_meta_boxes() {
 		//removes meta boxes from posts
 		remove_meta_box('postcustom','post','normal');
@@ -118,6 +123,7 @@ class os_customadmin {
 		//remove_meta_box('pageparentdiv','page','normal');
 		//remove_meta_box('slugdiv','page','normal');
 	}
+	
 	function custom_post_columns($defaults) {
 		unset($defaults['comments']);
 		unset($defaults['author']);
@@ -125,39 +131,55 @@ class os_customadmin {
 		unset($defaults['tags']);
 		return $defaults;
 	}
+	
 	function custom_pages_columns($defaults) {
 		unset($defaults['comments']);
 		unset($defaults['author']);
 		unset($defaults['date']);
 		return $defaults;
 	}
+	
 	function custom_media_columns($defaults) {
 		unset($defaults['comments']);
 		unset($defaults['author']);
 		return $defaults;
 	}
+	
+	//rename_post_object
+	function rename_post_object($label_single='News', $label_plural='News') {
+		$this->label_single = $label_single;
+		$this->label_plural = $label_plural;
+		add_action('init', array($this, 'change_post_object_labels'));
+		add_action('admin_menu', array($this, 'change_post_menu_label'));
+		add_action('admin_bar_menu', array($this, 'change_post_admin_bar_label'), 1000);
+	}
+	
+	function change_post_object_labels() {
+		global $wp_post_types;
+		$labels = &$wp_post_types['post']->labels;
+		$labels->name = $this->label_plural;
+		$labels->singular_name = $this->label_single;
+		$labels->add_new = 'Add '.$this->label_single;
+		$labels->add_new_item = 'Add '.$this->label_single;
+		$labels->edit_item = 'Edit '.$this->label_single;
+		$labels->new_item = 'New '.$this->label_single;
+		$labels->view_item = 'View '.$this->label_single;
+		$labels->search_items = 'Search '.$this->label_plural;
+		$labels->not_found = 'No '.$this->label_plural.' found';
+		$labels->not_found_in_trash = 'No '.$this->label_plural.' found in Trash';
+	}
+	
 	function change_post_menu_label() {
 		global $menu;
 		global $submenu;
-		$menu[5][0] = 'News';
-		$submenu['edit.php'][5][0] = 'News';
-		$submenu['edit.php'][10][0] = 'Add News';
-		$submenu['edit.php'][16][0] = 'News Tags';
-		echo '';
+		$menu[5][0] = $this->label_plural;
+		$submenu['edit.php'][5][0] = 'View '.$this->label_plural;
+		$submenu['edit.php'][10][0] = 'Add '.$this->label_single;
+		$submenu['edit.php'][16][0] = $this->label_single.' Tags';
 	}
-	function change_post_object_label() {
-		global $wp_post_types;
-		$labels = &$wp_post_types['post']->labels;
-		$labels->name = 'News';
-		$labels->singular_name = 'News';
-		$labels->add_new = 'Add News';
-		$labels->add_new_item = 'Add News';
-		$labels->edit_item = 'Edit News';
-		$labels->new_item = 'News';
-		$labels->view_item = 'View News';
-		$labels->search_items = 'Search News';
-		$labels->not_found = 'No News found';
-		$labels->not_found_in_trash = 'No News found in Trash';
+	
+	function change_post_admin_bar_label($wp_admin_bar) { 
+		$wp_admin_bar->add_node(array('id'=>'new-post', 'title'=>$this->label_single));
 	}
 	
 	//custom admin bar
@@ -175,8 +197,6 @@ class os_customadmin {
 		$wp_admin_bar->remove_node('new-media');
 		$wp_admin_bar->remove_node('new-link');
 		$wp_admin_bar->remove_node('new-user');
-		//rename new Post to News
-		$wp_admin_bar->add_node(array('id'=>'new-post', 'title'=>'News'));
 		//update myaccount tab
 		$myaccount = $wp_admin_bar->get_node('my-account');
 		$wp_admin_bar->add_node(array('id'=>'my-account', 'title'=>str_replace("Howdy", "Welcome", $myaccount->title)));
