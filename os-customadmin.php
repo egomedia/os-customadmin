@@ -5,13 +5,11 @@ Description: Cleans up the Wordpress admin to make more user-friendly for corpor
 Version: 1.0
 Author: Oli Salisbury
 */
-/*
+
 //you need to initialise the class in your functions.php file
-if (WP_ADMIN) {
-	include_once('scripts/os-customadmin.php');
-	new OS_CustomAdmin();
-}
-*/
+//include_once('scripts/os-customadmin.php');
+//new OS_CustomAdmin();
+
 
 class OS_CustomAdmin {
 	
@@ -22,11 +20,11 @@ class OS_CustomAdmin {
 		add_action('wp_dashboard_setup', array($this, 'remove_dashboard_widgets'));
 		add_action('admin_head', array($this, 'remove_dashboard_discussion'));
 		add_action('admin_menu', array($this, 'remove_surpless_menus'));
-		add_action('admin_menu', array($this, 'remove_surpless_submenus'));
+		//add_action('admin_menu', array($this, 'remove_surpless_submenus')); //causing debug errors
 		add_filter('manage_posts_columns', array($this, 'custom_post_columns'));
 		add_filter('manage_pages_columns', array($this, 'custom_pages_columns'));
 		add_filter('manage_media_columns', array($this, 'custom_media_columns'));
-		add_action('admin_bar_menu', array($this, 'custom_admin_bar'), 1000);
+		add_action('wp_before_admin_bar_render', array($this, 'custom_admin_bar'));
 		add_action('admin_menu', array($this, 'hide_updates_nag'));
 		add_filter('tiny_mce_before_init', array($this, 'custom_tiny_mce'));
 		add_action('admin_init', array($this, 'custom_meta_boxes'));
@@ -67,7 +65,7 @@ class OS_CustomAdmin {
 	
 	//remove dashboard widgets
 	function remove_dashboard_widgets(){
-		global$wp_meta_boxes;
+		global $wp_meta_boxes;
 		unset($wp_meta_boxes['dashboard']['normal']['core']['dashboard_plugins']);
 		unset($wp_meta_boxes['dashboard']['normal']['core']['dashboard_recent_comments']);
 		unset($wp_meta_boxes['dashboard']['side']['core']['dashboard_primary']);
@@ -131,7 +129,8 @@ class OS_CustomAdmin {
 	}
 	
 	//customise admin bar
-	function custom_admin_bar($wp_admin_bar) { 
+	function custom_admin_bar() { 
+		global $wp_admin_bar;
 		//remove wordpress tab
 		$wp_admin_bar->remove_node('wp-logo'); 
 		//remove visit site tab
@@ -146,7 +145,7 @@ class OS_CustomAdmin {
 		$wp_admin_bar->remove_node('new-user');
 		//update myaccount tab
 		$myaccount = $wp_admin_bar->get_node('my-account');
-		$wp_admin_bar->add_node(array('id'=>'my-account', 'title'=>str_replace("Howdy", "Welcome", $myaccount->title)));
+		$wp_admin_bar->add_node(array('id'=>'my-account', 'title'=>str_replace("Howdy", "Welcome", $myaccount->title), 'meta'=>''));
 	}
 	
 	//hide updates nag from non admins
@@ -197,7 +196,7 @@ class OS_CustomAdmin {
 		$this->label_plural = $label_plural;
 		add_action('init', array($this, 'change_post_object_labels'));
 		add_action('admin_menu', array($this, 'change_post_menu_label'));
-		add_action('admin_bar_menu', array($this, 'change_post_admin_bar_label'), 1000);
+		add_action('wp_before_admin_bar_render', array($this, 'change_post_admin_bar_label'));
 	}
 	
 	function change_post_object_labels() {
@@ -224,7 +223,8 @@ class OS_CustomAdmin {
 		$submenu['edit.php'][16][0] = $this->label_single.' Tags';
 	}
 	
-	function change_post_admin_bar_label($wp_admin_bar) { 
+	function change_post_admin_bar_label() { 
+		global $wp_admin_bar;
 		$wp_admin_bar->add_node(array('id'=>'new-post', 'title'=>$this->label_single));
 	}
 	
@@ -232,7 +232,7 @@ class OS_CustomAdmin {
 	//DISABLE POSTS
 	function disable_posts() {
 		add_action('admin_menu', array($this, 'remove_posts_menu'));
-		add_action('admin_bar_menu', array($this, 'remove_posts_admin_bar'), 1000);
+		add_action('wp_before_admin_bar_render', array($this, 'remove_posts_admin_bar'));
 		add_action('admin_head', array($this, 'remove_posts_dashboard'));
 	}
 	
@@ -248,7 +248,8 @@ class OS_CustomAdmin {
 
 	function remove_posts_admin_bar() { 
 		global $wp_admin_bar;
-		$wp_admin_bar->remove_node('new-content');//NOTE-remove entire item, just want it to remove the link
+		$wp_admin_bar->remove_node('new-post');
+		$wp_admin_bar->add_node(array('id'=>'new-content', 'href'=>false));
 	}
 	
 	function remove_posts_dashboard() {
@@ -264,7 +265,7 @@ class OS_CustomAdmin {
 	//DISABLE ADD NEW PAGE
 	function disable_add_new_page() {
 		add_action('admin_head', array($this, 'hide_add_new_page_button'));
-		add_action('admin_bar_menu', array($this, 'remove_pages_admin_bar'), 1000);
+		add_action('wp_before_admin_bar_render', array($this, 'remove_pages_admin_bar'));
 		add_action('admin_menu', array($this, 'remove_add_page_submenu'));
 	}
 	
@@ -288,6 +289,7 @@ class OS_CustomAdmin {
 		}
 	}
 	
+	
 	//OTHER FUNCTIONS
 	
 	//hide page attributes
@@ -295,9 +297,8 @@ class OS_CustomAdmin {
 		add_action('admin_init', array($this, 'remove_pageparent_div'));
 	}
 	function remove_pageparent_div() {
-		remove_meta_box('pageparentdiv','page','normal');
+		remove_meta_box('pageparentdiv', 'page', 'normal');
 	}
-	
 	
 	
 }
