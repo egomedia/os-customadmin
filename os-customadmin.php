@@ -2,7 +2,7 @@
 /*
 Plugin Name: OS Custom Admin
 Description: Cleans up the Wordpress admin to make more user-friendly for corporate clients.
-Version: 1.0
+Version: 1.1
 Author: Oli Salisbury
 */
 
@@ -28,6 +28,7 @@ class OS_CustomAdmin {
 		add_action('admin_menu', array($this, 'hide_updates_nag'));
 		add_filter('tiny_mce_before_init', array($this, 'custom_tiny_mce'));
 		add_action('admin_init', array($this, 'custom_meta_boxes'));
+		add_action('admin_head', array($this, 'hide_media_controls'));
 		$this->rename_post_object();
 	}
 	
@@ -188,6 +189,20 @@ class OS_CustomAdmin {
 		remove_meta_box('revisionsdiv','page','normal');
 		//remove_meta_box('pageparentdiv','page','normal');
 		//remove_meta_box('slugdiv','page','normal');
+	}
+	
+	//plugin css
+	function hide_media_controls() {
+		echo '
+		<style type="text/css">
+		#gallery-settings,
+		tr.url,
+		tr.align,
+		tr.image-size,
+		td.savesend input,
+		.max-upload-size
+		{ display:none !important; }
+		</style>';
 	}
 	
 	//RENAME POSTS
